@@ -1,4 +1,4 @@
-package org.maushake;
+package org.maushake.bootstrap;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
