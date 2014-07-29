@@ -26,13 +26,14 @@ package org.maushake.bootstrap;
  * @author jm
  * 
  * <pre>
+ *  o5140628 provide example conntection contoller, add logging
  *  o5140626 provide howto for java bootstrap  
  * </pre>
  *
  */
 public interface OtpNodeUpDownListener {
 
-	void nodeUp(String nodeName);
+	void remoteNodeUp(String nodeName);
 	
 	/**
 	 * <pre>
@@ -40,6 +41,6 @@ public interface OtpNodeUpDownListener {
 	 *   future versions will give more information
 	 * </pre> 
 	 */
-	void nodeDown(String nodeName);
+	void remoteNodeDown(String nodeName);
 	
 }

@@ -30,6 +30,9 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangBinary;
 import com.ericsson.otp.erlang.OtpErlangObject;
@@ -44,6 +47,7 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
  */
 public class BootstrapProtocol implements Runnable {
 
+	final private Logger logger = LoggerFactory.getLogger(BootstrapProtocol.class);
 	// o5140624 remove some elements from bootstrap protocol state like pattern and min connections
 	private static class State {
 
@@ -54,12 +58,15 @@ public class BootstrapProtocol implements Runnable {
 		Timer timer;
 		final long timeout; // the ping timeout
 		// final int minimum;
-
+		private final Logger logger;
+		
 		public State(BootstrapConfig bootstrapConfig) throws IOException {
 			// pattern = bootstrapConfig.connect_regex();
+			this.logger = LoggerFactory.getLogger(this.getClass());
+			// System.out.println(this.getClass().getSimpleName()+".constructor(...)");
 			Transport protocol_ = bootstrapConfig.getTransport();
 			int port_ = bootstrapConfig.primary_port();
-			socket = protocol_.openSocket(bootstrapConfig, port_);
+			socket = TransportUtils.open_socket(bootstrapConfig, port_, bootstrapConfig.secondary_posts());
 			protocol = protocol_;
 			port = port_;
 			timeout = bootstrapConfig.ping_timeout();
@@ -86,6 +93,7 @@ public class BootstrapProtocol implements Runnable {
 	 * 
 	 */
 	private static class MsgBox implements DatagramInbound, TimeoutEmitter {
+		
 		private static class QueuedRxDatagram {
 			public final InetAddress fromIp;
 			public final int fromPort;
@@ -99,10 +107,11 @@ public class BootstrapProtocol implements Runnable {
 		}
 
 		private final GenericQueue<Object> q;
-
+		private final Logger logger;
 		
 		public MsgBox() {
-			q = new GenericQueue<Object>();
+			this.q = new GenericQueue<Object>();
+			this.logger = LoggerFactory.getLogger(this.getClass());
 		}
 
 		/**
@@ -110,6 +119,10 @@ public class BootstrapProtocol implements Runnable {
 		 */
 		@Override
 		public void processDg(InetAddress fromIp, int fromPort, byte[] data) {
+			if(logger.isTraceEnabled()) {
+				logger.trace(".processDg fromIp = "+fromIp+" port = "+fromPort);
+			}	
+
 			// System.out.println(this.getClass().getSimpleName()+".processDg fromIp = "+fromIp+" port = "+fromPort);
 			q.put(new QueuedRxDatagram(fromIp, fromPort, data));
 		}
@@ -162,6 +175,7 @@ public class BootstrapProtocol implements Runnable {
 	 * 
 	 */
 	private static class HandleInfo implements MsgHandler<State> {
+		Logger logger = LoggerFactory.getLogger(HandleInfo.class);
 		private static enum BadDataKind {
 		 EXTERNAL_FORMAT,
 		 NOT_A_TUPLE,
@@ -208,12 +222,14 @@ public class BootstrapProtocol implements Runnable {
 		@Override
 		public State handleUdp(InetAddress fromIp, int fromPort, byte[] bytes,
 				State state) {
-			// System.out.println(this.getClass().getSimpleName()+".handleUdp fromIp = "+fromIp+" port = "+fromPort);
+		    // System.out.println(this.getClass().getSimpleName()+".handleUdp fromIp = "+fromIp+" port = "+fromPort);
 			OtpErlangBinary otpBinary = new OtpErlangBinary(bytes);
 			OtpErlangObject term;
 			try {
 				term = OtpErlangUtils.binary_to_term(otpBinary);
-				System.out.println(this.getClass().getSimpleName()+".handleUdp fromIp = "+fromIp+" port = "+fromPort+" msg = "+term);
+				if(logger.isTraceEnabled()) {
+				 logger.trace("handleUdp fromIp = "+fromIp+" port = "+fromPort+" msg = "+term);
+				}
 			} catch (IllegalArgumentException externalFormatStuff) {
 				// System.out.println(this.getClass().getSimpleName()+".handleUdp Error has occurred");
 				// externalFormatStuff.printStackTrace();
@@ -248,7 +264,7 @@ public class BootstrapProtocol implements Runnable {
 				InetAddress pingAddr = OtpErlangUtils
 						.match_inet_ip_address(elements[2]);
 				if (pingAddr == null) {
-					System.out.println(elements[2]);
+					// System.out.println(elements[2]);
 					return handleReceivedBadData(state, BadDataKind.NOT_INET_IP_ADDR);
 				}
 				if (node.equals(pingNodeStr)) {
@@ -287,9 +303,11 @@ public class BootstrapProtocol implements Runnable {
 		private State maybe_ping(State state) {
 			if(connectionController.should_ping()) {
               try {
-            	  return do_ping(node, state, bootstrapConfig);	
+            	  return do_ping(node, state, bootstrapConfig, logger);	
               } catch(IOException ioex) {
-            	  // TODO perform some logging
+            	  if(logger.isWarnEnabled()) {
+            		  logger.warn("maybe_ping", ioex);
+            	  }  
             	  return state;
               }
 			}
@@ -304,14 +322,19 @@ public class BootstrapProtocol implements Runnable {
 		 * </pre>
 		 */
 		private State handleReceivedBadData(State state, BadDataKind badDataKind) {
-			System.out.println("!!!! received bad data: "+badDataKind);
+			if(logger.isWarnEnabled()) {
+        		  logger.warn("!!!! received bad data: "+badDataKind);
+        	}
 			return state;
 		}
 
 		private State handle_ping(String pingNode, InetAddress pingAddr,
 				int fromPort, State state) {
 			// o5140603 bootstrap send DatagramPacket
-			System.out.println(this.getClass().getSimpleName()+".handle_ping pingAddr = "+pingAddr+" fromPort = "+fromPort);
+			if(logger.isTraceEnabled()) {
+				System.out.println("XXXXXXXXXXXXXXx");
+				logger.trace("handle_ping pingAddr = "+pingAddr+" fromPort = "+fromPort);
+			}
 			OtpErlangObject otpObj = BootstrapRecords.bootstrap_pong(node,
 					pingNode);
 			byte[] dgData = OtpErlangUtils.term_to_binary(otpObj).binaryValue();
@@ -363,6 +386,7 @@ public class BootstrapProtocol implements Runnable {
 	private final String node;
 	private final ConnectionController connectionController;
 	private State init() throws IOException {
+		// System.out.println(this.getClass().getSimpleName()+".init()");
 		return timer_backoff(msgBox, new State(bootstrapConfig));
 	}
 
@@ -379,13 +403,15 @@ public class BootstrapProtocol implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO: make trace statement
-		System.out.println("Starting bootsrap protocol at node: "+node);
-		
+		// System.out.println(this.getClass().getSimpleName()+".run()");
+		if(logger.isTraceEnabled()) {
+			logger.trace("Starting bootsrap protocol at node: "+node);
+		}
 		State state;
 		try {
 			state = init();
 		} catch (IOException ioex) {
+			System.out.println(this.getClass().getSimpleName()+".run() !!!+++ "+ioex.toString());
 			return;
 		}
 		final DatagramSocketRunner socketRunnable = new DatagramSocketRunner(msgBox,
@@ -401,28 +427,7 @@ public class BootstrapProtocol implements Runnable {
 		}
 	}
 
-	// TODO: open_socket should allow for IOException
-	DatagramSocket open_socket(int primaryPort, int[] secondaryPorts) {
-		Transport transport = bootstrapConfig.getTransport();
-		try {
-			return transport.openSocket(bootstrapConfig, primaryPort);
-		} catch (BindException bindex) {
-			// fall through
-		} catch (IOException ioex) {
-			throw new RuntimeException(ioex);
-		}
-		for (int portIdx = 0, n = secondaryPorts.length; portIdx < n; portIdx++) {
-			try {
-				return transport.openSocket(bootstrapConfig,
-						secondaryPorts[portIdx]);
-			} catch (BindException bindex) {
-				// fall through
-			} catch (IOException ioex) {
-				throw new RuntimeException(ioex);
-			}
-		}
-		throw new RuntimeException(new IOException("Too many nodes"));
-	}
+	
 
 	/**
 	 * This function is called when this node receives a ping from another node.
@@ -490,23 +495,15 @@ public class BootstrapProtocol implements Runnable {
 		return state.setTimer(timerRef);
 	}
 
-	State do_ping(State state) throws IOException {
-		InetAddress[] addresses = state.protocol.addresses(bootstrapConfig);
-		return do_ping(state, addresses);
-	}
-
-
-	static State do_ping(String thisNode, State state, BootstrapConfig bootstrapConfig) throws IOException {
-		return do_ping(thisNode, state, state.protocol.addresses(bootstrapConfig));
+	private static State do_ping(String thisNode, State state, BootstrapConfig bootstrapConfig, Logger logger) throws IOException {
+		return do_ping(thisNode, state, state.protocol.addresses(bootstrapConfig), logger);
 	}
 	
-	private State do_ping(State state, InetAddress[] addresses) {
-		return do_ping(this.node, state, addresses);
-	}
-
-	static State do_ping(String thisNode, State state, InetAddress[] addresses) {
-		// TODO make into trace message
-		System.out.println(thisNode+" is going to send a ping datagram");
+	private static State do_ping(String thisNode, State state, InetAddress[] addresses, Logger logger) {
+		final boolean trace = logger.isTraceEnabled();
+		if(trace) {
+			logger.trace("do_ping: "+thisNode+" is going to send a ping datagram");
+		}
 		DatagramSocket socket = state.socket;
 		int primaryPort = state.port;
 		for (int i = 0, n = addresses.length; i < n; i++) {
@@ -519,11 +516,13 @@ public class BootstrapProtocol implements Runnable {
 			try {
 				
 				socket.send(packet);
-				System.out.println("ping datagram "+thisNode+" sent");
-				
+				if(trace) {
+					logger.trace("do_ping: ping datagram "+thisNode+" sent");
+				}		
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if(logger.isWarnEnabled()) {
+					logger.warn("do_ping", e);
+				}
 			}
 		}
 		return state;

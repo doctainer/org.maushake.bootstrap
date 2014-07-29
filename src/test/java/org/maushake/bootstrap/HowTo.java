@@ -35,11 +35,11 @@ public class HowTo {
 	public static void main(String[] args) throws IOException {
 	 final String[] reworkedArgs = args.length == 0 ? new String[]{"abc@xyz"} : args;
 	 for(int i=0, n=reworkedArgs.length; i<n; i++) {
-		 bootstrapOnBefalfOfNode(new OtpNode(reworkedArgs[i]));
+		 bootstrapOnBehalfOfNode(new OtpNode(reworkedArgs[i]));
 	 }
 	}
 	
-	public static void bootstrapOnBefalfOfNode(OtpNode otpNode) {
+	public static void bootstrapOnBehalfOfNode(OtpNode otpNode) {
 		
 		// stick with the defaults 
 		BootstrapConfig bootstrapConfig = new BootstrapConfig();

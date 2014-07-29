@@ -21,27 +21,6 @@
  */
 package org.maushake.bootstrap;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+public class ExampleConnectionController {
 
-public class Main {
-public static void main(String[] args) throws UnknownHostException {
-	byte x = (byte)128;
-	int k = x & 0xff;
-	// System.out.println(k);
-	
-	// byte[] pingAddrBytes = new byte[]{(byte)239,(byte)192,0,1};
-	// InetAddress inetAddress = InetAddress.getByAddress(pingAddrBytes);
-	InetAddress inetAddress = InetAddress.getByName("2001:0db8:85a3:08d3:1319:8a2e:0370:7344");
-	byte[] addr = inetAddress.getAddress();
-	// Integer.toHexString(addr[0] & 0xff).
-	int l = 8;
-	for(int i=0; i<8; i++) {
-		
-	}
-	System.out.println(Integer.toHexString(addr[0] & 0xff) + Integer.toHexString(addr[1] & 0xff));
-	
-	System.out.println( InetAddress.getLocalHost().getHostName());
-			// getHostName();
-}
 }

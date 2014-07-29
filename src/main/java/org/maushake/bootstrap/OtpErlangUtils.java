@@ -109,16 +109,6 @@ public class OtpErlangUtils {
 	public static OtpErlangTuple tuple(OtpErlangObject... elems) {
 		return new OtpErlangTuple(elems);
 	}
-
-	// convert to type inet:ip4_address()
-	public static OtpErlangObject inet_ip4_address(int[] addr) {
-		int n = addr.length;
-		OtpErlangInt[] eInts = new OtpErlangInt[n];
-		for (int i = 0; i < n; i++) {
-			eInts[i] = new OtpErlangInt(addr[i]);
-		}
-		return new OtpErlangTuple(eInts);
-	}
     
 	// convert to type inet:ip_address()
 	public static OtpErlangObject inet_ip_address(InetAddress inetAddress) {

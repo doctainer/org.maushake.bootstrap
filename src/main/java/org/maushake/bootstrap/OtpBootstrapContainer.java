@@ -24,6 +24,9 @@ package org.maushake.bootstrap;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ericsson.otp.erlang.OtpNode;
 
 /**
@@ -45,17 +48,26 @@ public class OtpBootstrapContainer {
 	 }
  }
  
+ private final Logger logger;
  private final BootstrapConfig bootstrapConfig;
  private final Map<String, Elem> protocolInstances;
  
  public OtpBootstrapContainer(BootstrapConfig bootstrapConfig) {
+	 this.logger = LoggerFactory.getLogger(this.getClass());
 	 this.bootstrapConfig = bootstrapConfig;
 	 protocolInstances = new HashMap<String, OtpBootstrapContainer.Elem>();
  }
  
-  
+ 
+ // TODO: refactor addNode
  public synchronized void addNode(OtpNode otpNode) {
 	 String nodeName = otpNode.node();
+	 // System.out.println(this.getClass().getSimpleName()+".addNode("+nodeName+")");
+		if(logger.isTraceEnabled()) {
+			logger.trace("addNode("+nodeName+")");
+		}	
+	
+	 
 	 OtpConnectionController connectionCtl = OtpConnectionController.create(otpNode, bootstrapConfig);
 	 BootstrapProtocol bootstrapProtocol = new BootstrapProtocol(nodeName, connectionCtl, bootstrapConfig);
 	 Thread t = new Thread(bootstrapProtocol);

@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ericsson.otp.erlang.OtpNode;
 import com.ericsson.otp.erlang.OtpNodeStatus;
 
@@ -43,7 +46,7 @@ public class OtpConnectionController implements OtpNodeUpDownListener,
 	private final OtpNode otpNode;
 	private final String pattern;
 	final int minimum;
-	
+	private final Logger logger;
 	/**
 	 * Although an OtpNode maintains a map called connections which maps each
 	 * remote node name to its cooked connection, this data is encapsulated and
@@ -56,6 +59,7 @@ public class OtpConnectionController implements OtpNodeUpDownListener,
 		this.pattern = bootstrapConfig.connect_regex();
 		this.minimum = bootstrapConfig.min_connections();
 		this.connectedNodes = new ConcurrentHashMap<String, Date>();
+		this.logger = LoggerFactory.getLogger(OtpConnectionController.class);
 	}
 
 	/**
@@ -76,6 +80,9 @@ public class OtpConnectionController implements OtpNodeUpDownListener,
 	}
 
 	protected boolean match(String nodeName, String pattern) {
+		if(logger.isTraceEnabled()) {
+			logger.trace("match("+nodeName+","+pattern+")");
+		}
 		// perform some regex stuff
 		return nodeName.matches(pattern);
 	}
@@ -109,12 +116,12 @@ public class OtpConnectionController implements OtpNodeUpDownListener,
 	}
 
 	@Override
-	public void nodeUp(String nodeName) {
+	public void remoteNodeUp(String nodeName) {
 		connectedNodes.put(nodeName, new Date());
 	}
 
 	@Override
-	public void nodeDown(String nodeName) {
+	public void remoteNodeDown(String nodeName) {
 		connectedNodes.remove(nodeName);
 	}
 	

@@ -50,9 +50,9 @@ public class OtpNodeStatusAdapter extends OtpNodeStatus {
 		// with info being null when up is true
 		// or info being some Exception otherwise
 		if (up) {
-			otpNodeUpDownListener.nodeUp(node);
+			otpNodeUpDownListener.remoteNodeUp(node);
 		} else {
-			otpNodeUpDownListener.nodeDown(node);
+			otpNodeUpDownListener.remoteNodeDown(node);
 		}
 	}
 }

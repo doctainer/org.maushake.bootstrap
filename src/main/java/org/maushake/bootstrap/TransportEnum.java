@@ -28,6 +28,9 @@ import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.SocketAddress;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public enum TransportEnum implements Transport {
  Broadcast() {
 
@@ -45,14 +48,26 @@ public enum TransportEnum implements Transport {
 	 
  },
  Multicast() {
-
+    private final Logger logger = LoggerFactory.getLogger("MultiCast");
 	@Override
 	public DatagramSocket openSocket(BootstrapConfig theConfig, int port) throws IOException {
+		if(logger.isTraceEnabled()) {
+			logger.trace("openSocket()");
+		}
+		// System.out.println(this.toString()+".openSocket()");
 		MulticastSocket socket;
 		socket = new MulticastSocket(null); // see http://stackoverflow.com/questions/13558522/binding-to-a-specific-ip-address-and-port-to-receive-udp-data#
 		socket.setReuseAddress(false);
 		SocketAddress socketAddress = new InetSocketAddress(port);
+		try {
 		socket.bind(socketAddress);
+		} catch(IOException ex) {
+			if(logger.isTraceEnabled()) {
+				logger.trace("openSocket("+port+") !!! "+ex.toString());
+			}	
+		  // System.out.println(this.toString()+".openSocket("+port+") !!! "+ex.toString());	
+		  throw ex;
+		}
 		InetAddress multicastAddressGroup = InetAddress.getByName(theConfig.multicast_ip());
 		socket.joinGroup(multicastAddressGroup);
 		// 

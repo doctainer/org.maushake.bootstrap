@@ -26,25 +26,34 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * reads from a socket and places received datagrams in a queue.
  *  after some time of idleness while waiting for input: fetches datagrams from another queue and sends them over the socket
  * @author jm
  */
 public class DatagramSocketRunner implements DatagramOutbound, Runnable {
-
-	private boolean shouldRun = true;
+    private final Logger logger;
+    private boolean shouldRun = true;
 	static final int DATAGRAM_LENGTH = 1024;
 	final DatagramInbound receivedFromSocket;
 	GenericQueue<DatagramPacket> toBeSentToSocket;
 	final DatagramSocket socket;
 	
 	public DatagramSocketRunner(DatagramInbound receivedFromSocket, DatagramSocket socket) {
+		this.logger = LoggerFactory.getLogger(this.getClass());
 		this.receivedFromSocket = receivedFromSocket; 
 		this.toBeSentToSocket = new GenericQueue<DatagramPacket>();
 		this.socket = socket;
 	}
 	public void run() {
+		if(logger.isTraceEnabled()) {
+			logger.trace("run()");
+		}	
+	
+		// System.out.println(this.getClass().getSimpleName()+".run()");
 		while (shouldRun) {
 			// listen for a reply packet *
 			
@@ -90,6 +99,8 @@ public class DatagramSocketRunner implements DatagramOutbound, Runnable {
 	 */
 	@Override
 	public void deliverDg(DatagramPacket dg) {
+		// trace
+		System.out.println(this.getClass().getSimpleName()+".deliver(...)");
 		toBeSentToSocket.put(dg);
 	}
 }
