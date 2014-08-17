@@ -22,6 +22,7 @@
 package org.maushake.bootstrap;
 
 import java.io.IOException;
+import java.util.Properties;
 
 import org.maushake.bootstrap.BootstrapConfig;
 import org.maushake.bootstrap.ConnectionController;
@@ -32,11 +33,16 @@ import com.ericsson.otp.erlang.OtpNode;
 
 public class HowTo {
 
+	
 	public static void main(String[] args) throws IOException {
 	 final String[] reworkedArgs = args.length == 0 ? new String[]{"abc@xyz"} : args;
 	 for(int i=0, n=reworkedArgs.length; i<n; i++) {
 		 bootstrapOnBehalfOfNode(new OtpNode(reworkedArgs[i]));
 	 }
+	 
+	 // Properties props = LoadProperties.getPropertiesFromClasspath("/bootstrap_version.properties");
+	 //  
+	 // System.out.println(props);
 	}
 	
 	public static void bootstrapOnBehalfOfNode(OtpNode otpNode) {
